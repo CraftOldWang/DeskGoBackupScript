@@ -22,13 +22,16 @@
 
 格式为：[主屏幕]-[副屏幕]&[副屏幕]...
 
-### PowerShell+bat
+## PowerShell + bat
 
 **请注意！这个脚本用到了 .NET 中的类，请确保含你的环境中含有 .NET 库（一般来说win10及以上都有的）**
 
-将其中两个文件名为 `DeskGoBackup.ps1`和 `run.bat`的文件放在同一文件夹下，双击打开 `DeskGoBackup.bat`文件即可
+1. 将其中两个文件名为 `DeskGoBackup.ps1`和 `run.bat`的文件放在同一文件夹下
+2. 双击打开 `DeskGoBackup.bat`文件即可
 
 因为PowerShell只能在命令行中使用，所以双击打开就需要通过bat调用，当然也可以更改启动 `.ps1`的启动方式，这个请自行搜索
+
+### 可能出现的问题
 
 如果PowerShell脚本运行权限被禁止，可能是因为执行策略问题
 
@@ -38,21 +41,23 @@
 set-executionpolicy remotesigned
 ```
 
-#### 不算Bug的Bug
+### 不算Bug的Bug
 
 在显示屏幕分辨率的时候，如果你的屏幕缩放比例不是100%，则显示的不是你的屏幕实际分辨率，而是缩放后的虚拟分辨率，这个问题并不影响使用
 
 Python脚本因为使用的库已经处理过了，所以显示分辨率并没有问题
 
-### Python
+## Python
 
-使用前请先安装Python环境，确保能够直接执行Python脚本
+1. 使用前请先安装Python环境，确保能够直接执行Python脚本
 
-使用前需要安装以下库，命令为
+2. 使用前需要安装以下库，命令为
 
 ```bash
 pip install screeninfo psutil
 ```
+
+3. 然后双击启动即可
 
 一般来说 `shutil` 和 `subprocess`库在安装Python时就已经包含在内，如果仍提示缺少库，那么再执行
 
