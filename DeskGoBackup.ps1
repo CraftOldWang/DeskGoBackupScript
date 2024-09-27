@@ -159,16 +159,13 @@ function Main{
         if (!(Test-Path $BACKUP_PATH)) {
             $logger.warning("Backup path not found, creating...")
             New-Item -ItemType Directory -Path $BACKUP_PATH -Force | Out-Null
-            $logger.success("Backup folder created successfully!")
         }
         switch ($option) {
             1 {
-                # Write-Host "Backup data"
                 BackupFile
             }
             2 {
                 RestoreFile
-                # Write-Host "Restore data"
             }
             0 {
                 exit
@@ -179,18 +176,7 @@ function Main{
         }
     }
 
-
-    #  "Check path is exist..."
-    # # 检查备份文件夹是否存在，不存在则创建
-    # if (!(Test-Path $BACKUP_PATH)) {
-    #     New-Item -ItemType Directory -Path $BACKUP_PATH
-    #      "`nBuild folder success! Path is:$BACKUP_PATH"
-    # }
 }
 
-function Test{
-
-}
-
-# Test
+# 入口
 Main

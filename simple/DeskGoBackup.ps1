@@ -39,9 +39,6 @@ class Logger {
     warning([string]$message){
         Write-Host $message -ForegroundColor Yellow
     }
-    success([string]$message){
-        Write-Host $message -ForegroundColor Green
-    }
     info([string]$message){
         Write-Host $message -ForegroundColor Gray
     }
@@ -60,7 +57,6 @@ function BackupFile {
     foreach ($file in $fileList) {
         $logger.info("copy $appDataPath\$file to $backupFolderPath\$file")
         Copy-Item -Path "$appDataPath\$file" -Destination "$backupFolderPath\$file"
-        $logger.success("Backup $file success!")
     }
 }
 
@@ -100,7 +96,6 @@ function RestoreFile {
         foreach ($file in $fileList) {
             $logger.info("Copy $backupFolderPath\$file to $appDataPath\$file");
             Copy-Item -Path "$backupFolderPath\$file" -Destination "$appDataPath\$file" -Force | Out-Null
-            $logger.success("Restore $backupFolderPath\$file success!")
         }
     } else {
         $logger.warning("No backup files found!Skip execution copy backup files!")
@@ -150,16 +145,13 @@ function Main{
         if (!(Test-Path $backupPath)) {
             $logger.warning("Backup path not found, creating...")
             New-Item -ItemType Directory -Path $backupPath -Force | Out-Null
-            $logger.success("Backup folder created successfully!")
         }
         switch ($option) {
             1 {
-                # Write-Host "Backup data"
                 BackupFile
             }
             2 {
                 RestoreFile
-                # Write-Host "Restore data"
             }
             0 {
                 exit
@@ -170,42 +162,7 @@ function Main{
         }
     }
 
-
-    #  "Check path is exist..."
-    # # 检查备份文件夹是否存在，不存在则创建
-    # if (!(Test-Path $backupPath)) {
-    #     New-Item -ItemType Directory -Path $backupPath
-    #      "`nBuild folder success! Path is:$backupPath"
-    # }
 }
 
-function Test{
-    # # 常量名检查
-    # Write-Host 'ProcessName:'       $ProcessName
-    # Write-Host 'MainScreenName:'    $mainScreenName
-    # Write-Host 'AppDatePath:'       $appDataPath
-    # Write-Host 'BackupPath:'        $backupPath
-    # Write-Host 'FileList:'          $fileList
-    # Write-Host 'FolderName:'        $folderName
-    # Write-Host 'BackupFolderPath:'  $backupFolderPath
-
-    # # $desktopMgrProcess = Get-Process | Where-Object { $_.Name -like "$ProcessName" }
-    $desktopMgrProcess = $null
-    foreach($name in $ProcessName){
-        if((Get-Process -Name $name -ErrorAction SilentlyContinue)){
-            $desktopMgrProcess = Get-Process -Name $name
-            break
-        }
-    }
-    # 将进程的文件路径提取出来
-    $desktopMgrPath = $desktopMgrProcess.Path
-    Write-Host "`nDesktopMgrPath:$desktopMgrPath"
-    if ($desktopMgrProcess) {
-        Stop-Process -Name DesktopMgr64
-        Start-Sleep -Seconds 1
-    }
-    # Start-Process "C:\Program Files (x86)\Tencent\DeskGo\3.3.1491.127\DesktopMgr64.exe"
-}
-
-# Test
+# 入口
 Main
