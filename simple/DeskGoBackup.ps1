@@ -1,23 +1,34 @@
 # 加载必要的 .NET 类
 Add-Type -AssemblyName System.Windows.Forms
 
-
 # 可能的进程名称
-$PROCESS_NAME = @("DesktopMgr64","DesktopMgr")
+$ProcessName = @("DesktopMgr64","DesktopMgr")
+$screens = [System.Windows.Forms.Screen]::AllScreens
+# 主屏幕信息（去除屏幕名称中的\.\）
+$mainScreenName = [System.Windows.Forms.Screen]::PrimaryScreen.DeviceName.Replace('\\.\', '')
 # 应用数据文件夹
-$APP_DATA_PATH = [Environment]::GetFolderPath("ApplicationData") + "\Tencent\DeskGo"
+$appDataPath = [Environment]::GetFolderPath("ApplicationData") + "\Tencent\DeskGo\"
 # 备份文件夹
-$BACKUP_PATH = $APP_DATA_PATH + "\Backup"
+$backupPath = $appdataPath + "Backup\"
 # 文件列表
-$FILE_LIST = @("ConFile.dat","DesktopMgr.lg","FencesDataFile.dat")
+$fileList = @("ConFile.dat","DesktopMgr.lg","FencesDataFile.dat")
 
-# 屏幕列表
-$screenList = [System.Windows.Forms.Screen]::AllScreens
-# 主屏幕
-$mainScreen = [System.Windows.Forms.Screen]::PrimaryScreen
+# 拼接文件夹名称
+$folderName = $mainScreenName
+foreach ($screen in $screens) {
+    # 跳过主屏幕
+    if([bool]$screen.Primary){
+        continue
+    }
+    $screenName = $screen.DeviceName.Replace('\\.\', '')
+    $folderName = $folderName+"-"+$screenName+"&"
+}
+$folderName = $folderName.TrimEnd("&")
 
+# 根据当前屏幕信息拼接的整个备份文件夹路径
+$backupFolderPath = $backupPath + $folderName
 
-# 日志记录器
+# 创建日志记录器
 class Logger {
     message([string]$message){
         Write-Host $message
@@ -28,35 +39,14 @@ class Logger {
     warning([string]$message){
         Write-Host $message -ForegroundColor Yellow
     }
+    success([string]$message){
+        Write-Host $message -ForegroundColor Green
+    }
     info([string]$message){
         Write-Host $message -ForegroundColor Gray
     }
 }
-# 创建日志记录器
-$logger = New-Object Logger
-
-# 根据当前屏幕信息拼接的整个备份文件夹路径
-function getBackupFolderPathByScreenInfo{
-    $folderName = $mainScreen.DeviceName.Replace('\\.\', '') + "($($mainScreen.Bounds.Width)x$($mainScreen.Bounds.Height))"
-    foreach ($screen in $screenList) {
-        # 跳过主屏幕
-        if([bool]$screen.Primary){
-            continue
-        }
-        $offsetX = [Math]::Abs($screen.Bounds.X)
-        $offsetY = [Math]::Abs($screen.Bounds.Y)
-        $suffix = "($($screen.Bounds.Width)x$($screen.Bounds.Height))[$($offsetX)$($offsetY)]"
-        $screenName = $screen.DeviceName.Replace('\\.\', '') + $suffix
-        $folderName = $folderName+'-'+$screenName+'&'
-    }
-    $folderName = $folderName.TrimEnd('&')
-
-    $backupFolderPath = $BACKUP_PATH+ '\' + $folderName
-
-    return $backupFolderPath
-}
-# 当前屏幕备份的文件夹路径
-$backupFolderPath = getBackupFolderPathByScreenInfo
+$logger = [Logger]::new()
 
 # 备份文件函数
 function BackupFile {
@@ -67,9 +57,10 @@ function BackupFile {
         New-Item -ItemType Directory -Path $backupFolderPath -Force | Out-Null
     }
     # TODO复制数据到当前屏幕组合的备份文件夹中
-    foreach ($file in $FILE_LIST) {
-        $logger.info("copy $APP_DATA_PATH\$file to $backupFolderPath\$file")
-        Copy-Item -Path "$APP_DATA_PATH\$file" -Destination "$backupFolderPath\$file"
+    foreach ($file in $fileList) {
+        $logger.info("copy $appDataPath\$file to $backupFolderPath\$file")
+        Copy-Item -Path "$appDataPath\$file" -Destination "$backupFolderPath\$file"
+        $logger.success("Backup $file success!")
     }
 }
 
@@ -78,7 +69,7 @@ function RestoreFile {
     # 设置一个bool变量，判断是否存在当前屏幕组合的备份文件
     $backupFileExist = $true
     # 根据当前屏幕组合的备份文件夹，检查备份文件是否都存在
-    foreach ($file in $FILE_LIST) {
+    foreach ($file in $fileList) {
         if (!(Test-Path "$backupFolderPath\$file")) {
             # 不存在的话提示，但是不退出
             $logger.error("Backup $backupFolderPath\$file not exist!")
@@ -88,7 +79,7 @@ function RestoreFile {
 
     # 从进程列表中获取进程
     $desktopMgrProcess = $null
-    foreach($name in $PROCESS_NAME){
+    foreach($name in $ProcessName){
         if((Get-Process -Name $name -ErrorAction SilentlyContinue)){
             $desktopMgrProcess = Get-Process -Name $name
             break
@@ -106,9 +97,10 @@ function RestoreFile {
 
     # 复制文件到当前屏幕组合的备份文件夹中
     if ($backupFileExist) {
-        foreach ($file in $FILE_LIST) {
-            $logger.info("Copy $backupFolderPath\$file to $APP_DATA_PATH\$file");
-            Copy-Item -Path "$backupFolderPath\$file" -Destination "$APP_DATA_PATH\$file" -Force | Out-Null
+        foreach ($file in $fileList) {
+            $logger.info("Copy $backupFolderPath\$file to $appDataPath\$file");
+            Copy-Item -Path "$backupFolderPath\$file" -Destination "$appDataPath\$file" -Force | Out-Null
+            $logger.success("Restore $backupFolderPath\$file success!")
         }
     } else {
         $logger.warning("No backup files found!Skip execution copy backup files!")
@@ -121,9 +113,8 @@ function RestoreFile {
 
 # 主函数
 function Main{
-
     # 如果没有此文件夹，说明未安装程序
-    if (!(Test-Path $APP_DATA_PATH)) {
+    if (!(Test-Path $appDataPath)) {
         $logger.error("You haven't installed application DeskGo!Wait 3 seconds will exit!")
         # 停止三秒退出
         Start-Sleep -Seconds 3
@@ -134,13 +125,13 @@ function Main{
     Write-Host Current Time: "$(Get-Date)"
     # 列出目前正在使用的显示器信息
     $logger.warning("This resolution is't your device real resolution!It is be scaled by the screen DPI scale.")
-    foreach ($screen in $screenList) {
+    foreach ($screen in $screens) {
         Write-Host "----------------------------------------------"
         if ($screen.Primary) {
             $logger.warning("Primary screen")
         }
         Write-Host "Screen name: $($screen.DeviceName.Replace('\\.\', ''))"
-        Write-Host "Screen resolution: $($screen.Bounds)"
+        Write-Host "Screen resolution: $($screen.Bounds.Width) x $($screen.Bounds.Height)"
         Write-Host "Screen working area: $($screen.WorkingArea)"
     }
 
@@ -156,9 +147,9 @@ function Main{
         $option = Read-Host
         Write-Host "`nStarting..."
 
-        if (!(Test-Path $BACKUP_PATH)) {
+        if (!(Test-Path $backupPath)) {
             $logger.warning("Backup path not found, creating...")
-            New-Item -ItemType Directory -Path $BACKUP_PATH -Force | Out-Null
+            New-Item -ItemType Directory -Path $backupPath -Force | Out-Null
             $logger.success("Backup folder created successfully!")
         }
         switch ($option) {
@@ -182,14 +173,38 @@ function Main{
 
     #  "Check path is exist..."
     # # 检查备份文件夹是否存在，不存在则创建
-    # if (!(Test-Path $BACKUP_PATH)) {
-    #     New-Item -ItemType Directory -Path $BACKUP_PATH
-    #      "`nBuild folder success! Path is:$BACKUP_PATH"
+    # if (!(Test-Path $backupPath)) {
+    #     New-Item -ItemType Directory -Path $backupPath
+    #      "`nBuild folder success! Path is:$backupPath"
     # }
 }
 
 function Test{
+    # # 常量名检查
+    # Write-Host 'ProcessName:'       $ProcessName
+    # Write-Host 'MainScreenName:'    $mainScreenName
+    # Write-Host 'AppDatePath:'       $appDataPath
+    # Write-Host 'BackupPath:'        $backupPath
+    # Write-Host 'FileList:'          $fileList
+    # Write-Host 'FolderName:'        $folderName
+    # Write-Host 'BackupFolderPath:'  $backupFolderPath
 
+    # # $desktopMgrProcess = Get-Process | Where-Object { $_.Name -like "$ProcessName" }
+    $desktopMgrProcess = $null
+    foreach($name in $ProcessName){
+        if((Get-Process -Name $name -ErrorAction SilentlyContinue)){
+            $desktopMgrProcess = Get-Process -Name $name
+            break
+        }
+    }
+    # 将进程的文件路径提取出来
+    $desktopMgrPath = $desktopMgrProcess.Path
+    Write-Host "`nDesktopMgrPath:$desktopMgrPath"
+    if ($desktopMgrProcess) {
+        Stop-Process -Name DesktopMgr64
+        Start-Sleep -Seconds 1
+    }
+    # Start-Process "C:\Program Files (x86)\Tencent\DeskGo\3.3.1491.127\DesktopMgr64.exe"
 }
 
 # Test
