@@ -71,6 +71,25 @@ function BackupFile {
         $logger.info("copy $APP_DATA_PATH\$file to $backupFolderPath\$file")
         Copy-Item -Path "$APP_DATA_PATH\$file" -Destination "$backupFolderPath\$file"
     }
+
+    $logger.info("Press y to back backup file(if don't need type enter):")
+    $back = Read-Host
+    if($back -eq 'y'){
+        BackBackupFile
+    }
+}
+
+function BackBackupFile {
+    $backbackup = $backupFolderPath + ".back"
+    if (!(Test-Path $backbackup)) {
+        New-Item -ItemType Directory -Path $backbackup -Force | Out-Null
+    }
+
+    foreach ($file in $FILE_LIST) {
+        $logger.info("copy $APP_DATA_PATH\$file to $backbackup\$file")
+        Copy-Item -Path "$APP_DATA_PATH\$file" -Destination "$backbackup\$file"
+    }
+    $logger.info("success copy to $backbackup")
 }
 
 # 恢复文件函数
