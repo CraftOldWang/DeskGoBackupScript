@@ -1,10 +1,8 @@
+import sys
 import datetime
-
 from screeninfo import get_monitors
 import os
-import subprocess
 from win32api import GetSystemMetrics
-from ctypes import windll
 from time import sleep
 
 
@@ -92,6 +90,8 @@ def backup_function():
     # 增加副本，防止把恢复按成备份
     if input("是否需要创建防手滑副本，需要创建请按Y（不需要直接回车即可）:") == 'Y':
         back_backup_function()
+        
+    sys.exit(1)
 
 def back_backup_function():
     if not os.path.exists(backup_folder_path + ".back"):
@@ -124,16 +124,7 @@ def restore_function():
             # 复制并且覆盖文件
             shutil.copy(backup_folder_path + "\\" + filename, APP_DATA_PATH + "\\" + filename)
             print(f"复制文件:\n{backup_folder_path}\\{filename} 到 {APP_DATA_PATH}")
-
-    print("重启进程中...")
-    try:
-        subprocess.Popen(process_path, shell=True)
-    except subprocess.CalledProcessError as e:
-        print(f"启动进程失败: {e}")
-    except Exception as e:
-        print(f"发生错误: {e}")
-
-    return
+    sys.exit(0)
 
 
 if __name__ == "__main__":
@@ -142,27 +133,27 @@ if __name__ == "__main__":
     if (not os.path.exists(APP_DATA_PATH)):
         print("没有AppData文件，请确认您已经安装了腾讯桌面管理！或者检查APP_DATA是否正确！")
         sleep(3)
-        exit
+        sys.exit(1)
 
 
     print(datetime.datetime.today())
     print_screen_info()
 
     switcher = {
-        "1": backup_function,
-        "2": restore_function,
-        "0": exit
+        "1": backup_function,  
+        "2": restore_function, 
+        "0": lambda:sys.exit(1)  
     }
 
-    while True:
-        print("------------------------")
-        print("OPTION:")
-        print("1.备份")
-        print("2.恢复")
-        print("0.退出")
-        print("请选择:", end="")
-        option = str(input())
-        print("------------------------")
-        print("Start ...")
-        fun = switcher.get(option)
-        fun()
+
+    print("------------------------")
+    print("OPTION:")
+    print("1.备份")
+    print("2.恢复")
+    print("0.退出")
+    print("请选择:", end="")
+    option = str(input())
+    print("------------------------")
+    print("Start ...")
+    fun = switcher.get(option)
+    fun()
